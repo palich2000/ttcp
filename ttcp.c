@@ -177,6 +177,13 @@ void
 sigpipe()
 {
 }
+static int stop = 0;
+
+void
+sigint(int signum){
+    printf("\nSIGINT received. Terminating... \n");
+    stop++;
+}
 
 int
 main(int argc, char **argv)
@@ -263,6 +270,8 @@ main(int argc, char **argv)
 			goto usage;
 		}
 	}
+
+    signal(SIGINT, sigint);
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = af;
@@ -500,7 +509,7 @@ main(int argc, char **argv)
 			if (udp)
 				(void)Nwrite(fd, buf, 4); /* rcvr start */
 
-			while (nbuf-- && Nwrite(fd, buf, buflen) == buflen) {
+			while (nbuf-- && Nwrite(fd, buf, buflen) == buflen && !stop) {
                 nbytes += buflen;
                 struct timeval time_now;
                 struct timeval td;
@@ -520,7 +529,7 @@ main(int argc, char **argv)
 				(void)Nwrite(fd, buf, 4); /* rcvr end */
 		} else {
 			if (udp) {
-			    while ((cnt = Nread(fd, buf, buflen)) > 0)  {
+			    while ((cnt = Nread(fd, buf, buflen)) > 0 && !stop)  {
 				    static int going = 0;
 				    if (cnt <= 4) {
 					    if (going)
@@ -536,7 +545,7 @@ main(int argc, char **argv)
                 gettimeofday(&time_start, (struct timezone *)0);
                 time_start0=time_start;
                 double nbytes_prev = 0;
-			    while ((cnt = Nread(fd, buf, buflen)) > 0)  {
+			    while ((cnt = Nread(fd, buf, buflen)) > 0 && !stop)  {
 				    nbytes += cnt;
                     struct timeval time_now;
                     struct timeval td;
@@ -558,11 +567,11 @@ main(int argc, char **argv)
 		register int cnt;
 		if (trans) {
 			while ((cnt = read(0, buf, buflen)) > 0 &&
-			    Nwrite(fd, buf, cnt) == cnt)
+			    Nwrite(fd, buf, cnt) == cnt && !stop)
 				nbytes += cnt;
 		} else {
 			while ((cnt = Nread(fd, buf, buflen)) > 0 &&
-			    write(1, buf, cnt) == cnt)
+			    write(1, buf, cnt) == cnt && !stop )
 				nbytes += cnt;
 		}
 	}
